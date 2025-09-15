@@ -45,10 +45,8 @@ management:
 article:
   api:
     naver:
-      id: ${ARTICLE_API_NAVER_ID}
-      secret: ${ARTICLE_API_NAVER_SECRET}
-  #article.api.naver.id:test
-
+      id: ${ARTICLE_API_NAVER_ID:test}
+      secret: ${ARTICLE_API_NAVER_SECRET:test}
 
 logging:
   level:

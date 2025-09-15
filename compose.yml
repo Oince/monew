@@ -1,24 +1,65 @@
 services:
-  my-server:
-    container_name: my-server
-    build: .
+  monew-app:
+    container_name: monew-app
+    build:
+      context: .
+      dockerfile: Dockerfile
     ports:
-      - 80:80
+      - "8080:8080"
+    env_file:
+      - .env
     environment:
-      - SPRING_DATASOURCE_URL=${SPRING_DATASOURCE_URL}
-      - SPRING_DATASOURCE_USERNAME=${SPRING_DATASOURCE_USERNAME}
-      - SPRING_DATASOURCE_PASSWORD=${SPRING_DATASOURCE_PASSWORD}
-      - SPRING_PROFILES_ACTIVE=${SPRING_PROFILES_ACTIVE}
-      - SPRING_DATASOURCE_DRIVER_CLASS_NAME=${SPRING_DATASOURCE_DRIVER_CLASS_NAME}
-      - AWS_S3_ACCESS_KEY=${AWS_S3_ACCESS_KEY}
-      - AWS_S3_SECRET_KEY=${AWS_S3_SECRET_KEY}
-      - AWS_S3_REGION=${AWS_S3_REGION}
-      - AWS_S3_BUCKET=${AWS_S3_BUCKET}
-      - AWS_REGION=${AWS_REGION}
-      - ARTICLE_API_NAVER_ID=${ARTICLE_API_NAVER_ID}
-      - ARTICLE_API_NAVER_SECRET=${ARTICLE_API_NAVER_SECRET}
-      - MONGODB_URI=${MONGODB_URI}
-      - MONGODB_DATABASE=${MONGODB_DATABASE}
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://db:5432/${DB_NAME}
+      - SPRING_DATASOURCE_USERNAME=${DB_USER}
+      - SPRING_DATASOURCE_PASSWORD=${DB_PASSWORD}
+      - MONGODB_URI=mongodb://${DB_USER}:${DB_PASSWORD}@mongo:27017/${DB_NAME}
+      - MONGODB_DATABASE=${DB_NAME}
+      - AWS_S3_ACCESS_KEY=${MINIO_USER}
+      - AWS_S3_SECRET_KEY=${MINIO_PASSWORD}
+    depends_on:
+      - db
+      - mongo
+      - minio
 
+  db:
+    image: postgres:17-alpine
+    container_name: monew-db
+    environment:
+      - POSTGRES_DB=${DB_NAME}
+      - POSTGRES_USER=${DB_USER}
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
+    ports:
+      - "5432:5432"
     volumes:
-      - ./app-data:/.monew/storage
+      - postgres-data:/var/lib/postgresql/data
+      - ./src/main/resources/schema.sql:/docker-entrypoint-initdb.d/1-schema.sql
+      - ./src/main/resources/seed.sql:/docker-entrypoint-initdb.d/2-seed.sql
+
+  mongo:
+    image: mongo:latest
+    container_name: monew-mongo
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=${DB_USER}
+      - MONGO_INITDB_ROOT_PASSWORD=${DB_PASSWORD}
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-data:/data/db
+
+  minio:
+    image: minio/minio:latest
+    container_name: monew-s3
+    environment:
+      - MINIO_ROOT_USER=${MINIO_USER}
+      - MINIO_ROOT_PASSWORD=${MINIO_PASSWORD}
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    command: server /data --console-address ":9001"
+    volumes:
+      - minio-data:/data
+
+volumes:
+  postgres-data:
+  mongo-data:
+  minio-data:
