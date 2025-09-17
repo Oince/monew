@@ -17,6 +17,7 @@ import org.springframework.batch.core.JobParametersInvalidException;
 import org.springframework.batch.core.repository.JobExecutionAlreadyRunningException;
 import org.springframework.batch.core.repository.JobInstanceAlreadyCompleteException;
 import org.springframework.batch.core.repository.JobRestartException;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort.Direction;
 import org.springframework.http.ResponseEntity;
@@ -64,6 +65,28 @@ public class ArticleController implements ArticleApi {
         keyword, interestId, sourceIn, publishDateFrom, publishDateTo, cursor, after);
     PageRequest pageRequest = PageRequest.of(0, limit, Direction.fromString(direction.name()), orderBy);
     CursorPageResponseDto<ArticleDto> response = articleService.getArticles(articleCondition,
+        pageRequest, userId);
+    return ResponseEntity.ok(response);
+  }
+
+  @GetMapping("/with-offset")
+  public ResponseEntity<Page<ArticleDto>> getArticlesWithOffset(
+      @RequestParam(required = false) String keyword,
+      @RequestParam(required = false) UUID interestId,
+      @RequestParam(required = false) List<String> sourceIn,
+      @RequestParam(required = false) LocalDateTime publishDateFrom,
+      @RequestParam(required = false) LocalDateTime publishDateTo,
+      @RequestParam(required = false) String cursor,
+      @RequestParam(required = false) Instant after,
+      @RequestParam String orderBy,
+      @RequestParam ArticleSortDirection direction,
+      @RequestParam int limit,
+      @RequestHeader("Monew-Request-User-ID") UUID userId
+  ) {
+    ArticleCondition articleCondition = ArticleCondition.create(
+        keyword, interestId, sourceIn, publishDateFrom, publishDateTo, cursor, after);
+    PageRequest pageRequest = PageRequest.of(50000, limit, Direction.fromString(direction.name()), orderBy);
+    Page<ArticleDto> response = articleService.getArticlesWithOffset(articleCondition,
         pageRequest, userId);
     return ResponseEntity.ok(response);
   }

@@ -33,6 +33,7 @@ import org.springframework.batch.core.repository.JobExecutionAlreadyRunningExcep
 import org.springframework.batch.core.repository.JobInstanceAlreadyCompleteException;
 import org.springframework.batch.core.repository.JobRestartException;
 import org.springframework.batch.item.ExecutionContext;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Slice;
 import org.springframework.data.domain.Sort;
@@ -107,6 +108,12 @@ public class ArticleService {
         totalElements,
         page.hasNext()
     );
+  }
+
+  @Transactional(readOnly = true)
+  public Page<ArticleDto> getArticlesWithOffset(
+      ArticleCondition articleCondition, Pageable pageable, UUID userId) {
+    return articleRepository.getArticlesWithOffset(articleCondition, userId, pageable);
   }
 
   @Transactional(propagation = Propagation.NOT_SUPPORTED)

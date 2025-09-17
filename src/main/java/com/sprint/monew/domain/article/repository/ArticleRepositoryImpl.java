@@ -19,6 +19,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Slice;
 import org.springframework.data.domain.SliceImpl;
@@ -71,6 +73,43 @@ public class ArticleRepositoryImpl implements ArticleRepositoryCustom {
     }
 
     return new SliceImpl<>(result, pageable, hasNext);
+  }
+
+  @Override
+  public Page<ArticleDto> getArticlesWithOffset(ArticleCondition condition, UUID userId, Pageable pageable) {
+    QArticleView viewAll = new QArticleView("viewAll");
+    QArticleView viewMe = new QArticleView("viewMe");
+    List<ArticleDto> result = queryFactory
+        .select(Projections.constructor(
+            ArticleDto.class, article.id, article.createdAt, article.source.stringValue(), article.sourceUrl, article.title,
+            article.publishDate, article.summary, comment.countDistinct(), viewAll.countDistinct(), viewMe.id.isNotNull())
+        )
+        .from(article)
+        .leftJoin(comment).on(comment.article.eq(article).and(comment.deleted.isFalse()))
+        .leftJoin(article.articleViews, viewAll)
+        .leftJoin(article.articleViews, viewMe).on(viewMe.user.id.eq(userId))
+        .leftJoin(article.articleInterests, articleInterest)
+        .leftJoin(articleInterest.interest, interest)
+        .where(
+            article.deleted.isFalse(),
+            searchKeyword(condition.keyword()),
+            interestIdEq(condition.interestId()),
+            sourceConditionIn(condition.sourceIn()),
+            publishDateFrom(condition.publishDateFrom()),
+            publishDateTo(condition.publishDateTo())
+        )
+        .groupBy(
+            article.id, article.createdAt, article.source, article.sourceUrl,
+            article.title, article.publishDate, article.summary, viewMe.id
+        )
+        .orderBy(getOrderSpecifiers(pageable.getSort(), viewAll))
+        .offset(pageable.getOffset())
+        .limit(pageable.getPageSize())
+        .fetch();
+
+    Long total = getArticleCount(condition);
+
+    return new PageImpl<>(result, pageable, total);
   }
 
   public List<String> findAllSourceUrl() {
