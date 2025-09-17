@@ -81,11 +81,12 @@ public class ArticleController implements ArticleApi {
       @RequestParam String orderBy,
       @RequestParam ArticleSortDirection direction,
       @RequestParam int limit,
+      @RequestParam int offset,
       @RequestHeader("Monew-Request-User-ID") UUID userId
   ) {
     ArticleCondition articleCondition = ArticleCondition.create(
         keyword, interestId, sourceIn, publishDateFrom, publishDateTo, cursor, after);
-    PageRequest pageRequest = PageRequest.of(50000, limit, Direction.fromString(direction.name()), orderBy);
+    PageRequest pageRequest = PageRequest.of(offset, limit, Direction.fromString(direction.name()), orderBy);
     Page<ArticleDto> response = articleService.getArticlesWithOffset(articleCondition,
         pageRequest, userId);
     return ResponseEntity.ok(response);
